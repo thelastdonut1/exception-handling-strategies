@@ -5,14 +5,14 @@ A side-by-side reference comparing **exception-based** and **Result-based** erro
 ## Repository Structure
 
 ```
-├── ExceptionDemo/          # Exception-based approach
+├── ExceptionDemo/          # Exception-based implementation
 │   ├── Controllers/
 │   ├── Services/
 │   ├── Repositories/
 │   ├── Database/
 │   ├── Exceptions/
 │   └── Models/
-├── ResultDemo/             # Result-based approach
+├── ResultDemo/             # Result-based implementation
 │   ├── Controllers/
 │   ├── Services/
 │   ├── Repositories/
@@ -20,14 +20,15 @@ A side-by-side reference comparing **exception-based** and **Result-based** erro
 │   ├── Common/
 │   └── Models/
 └── docs/
-    ├── exception-approach.md
-    ├── result-approach.md
-    └── comparison.md
+    ├── exceptions.md       # Exception pattern explained
+    ├── results.md          # Result pattern explained
+    ├── example.md          # This repo's example explained
+    └── analysis.md         # Balanced comparison & recommendations
 ```
 
-## The Scenario
+## The Example
 
-Both demos model the same order placement flow:
+Both demos implement the same order placement flow:
 
 ```
 Controller.HandlePlaceOrder()
@@ -43,11 +44,18 @@ Each layer can fail. The demos show how errors propagate through this stack in e
 
 | Aspect | Exceptions | Results |
 |--------|------------|---------|
-| Error visibility | Hidden in implementation | Explicit in return type |
 | Propagation | Automatic (throw/catch) | Manual (check and return) |
-| Logging | Often duplicated per layer | Single point at boundary |
-| Business failures | Same mechanism as system errors | Distinct from infrastructure errors |
+| Handling | Opt-in (catch if you want) | Forced (must acknowledge) |
+| Type signature | Hides failure modes | Explicit: `Result<T>` |
+| Best for | Rare failures, deep stacks, .NET interop | Expected failures, business logic, structured errors |
 
-## Further Reading
+## Documentation
 
-See `/docs` for detailed explanations of each approach.
+| Document | Contents |
+|----------|----------|
+| [exceptions.md](docs/exceptions.md) | How exception handling works, common patterns, best practices |
+| [results.md](docs/results.md) | How Result types work, Bind/Map/Match patterns, libraries |
+| [example.md](docs/example.md) | Walkthrough of this repository's code, side-by-side comparisons |
+| [analysis.md](docs/analysis.md) | Balanced comparison, when to use each, industry landscape, recommendations |
+
+Start with `analysis.md` for the big picture, then explore the pattern-specific docs as needed.

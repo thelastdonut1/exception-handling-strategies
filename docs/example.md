@@ -1,8 +1,70 @@
-# Side-by-Side Comparison
+# About This Example
 
-## Same Operation, Different Approaches
+## The Scenario
 
-### Checking Inventory (Repository Layer)
+Both demos implement the same order placement flow:
+
+```
+Controller.HandlePlaceOrder()
+  → OrderService.PlaceOrder()
+    → InventoryService.ReserveItems()
+      → InventoryRepository.UpdateQuantity()
+        → Database.Execute()
+```
+
+This is a typical layered architecture: Controller → Service → Repository → Database. Each layer can fail, and errors must somehow reach the controller to become an API response.
+
+## What the Code Shows
+
+### ExceptionDemo
+
+The exception-based implementation demonstrates:
+
+**Exception wrapping at each layer**
+```
+DataException (database)
+  → RepositoryException (repository catches, wraps, rethrows)
+    → InventoryException (service catches, wraps, rethrows)
+      → OrderException (service catches, wraps, rethrows)
+```
+
+**Logging at multiple layers**
+
+Each catch block logs before rethrowing. Comments mark these as `// Log #1`, `// Log #2`, etc. to highlight the duplication.
+
+**String matching for error types**
+
+The controller's `GetUserFriendlyMessage()` method checks `ex.Message.Contains("Insufficient")` to determine error types—a fragile pattern.
+
+**Business cases as exceptions**
+
+"Insufficient inventory" is a normal business outcome, but it uses the same exception mechanism as database failures.
+
+### ResultDemo
+
+The Result-based implementation demonstrates:
+
+**No try-catch blocks in service/repository layers**
+
+Errors flow through return values. The code reads linearly.
+
+**Single logging point**
+
+Only the controller has a logger. Errors are logged once at the boundary.
+
+**Error codes for branching**
+
+The controller switches on `error.Code` rather than matching exception message strings.
+
+**Structured context**
+
+Errors carry a `Context` dictionary with typed values like `ItemId` and `RequestedQuantity`.
+
+**Explicit partial failure handling**
+
+The `InventoryService.ReserveItems()` method tracks which items were reserved and actually implements rollback on failure.
+
+## Side-by-Side: Repository Layer
 
 **Exception approach:**
 ```csharp
@@ -51,9 +113,7 @@ public Result<InventoryItem> GetItem(int itemId)
 }
 ```
 
----
-
-### Handling Errors (Controller Layer)
+## Side-by-Side: Controller Layer
 
 **Exception approach:**
 ```csharp
@@ -67,8 +127,6 @@ public ApiResponse<Order> HandlePlaceOrder(string customerId, List<OrderItem> it
     catch (OrderException ex)
     {
         _logger.Error("Order failed", ex);
-        
-        // Walk the InnerException chain to find root cause
         var message = GetUserFriendlyMessage(ex);
         return ApiResponse.Error(message);
     }
@@ -118,25 +176,8 @@ private string GetUserFriendlyMessage(Error error)
 }
 ```
 
----
+## Important Caveat
 
-## When to Use Each
+This example was designed to highlight differences between the approaches in a scenario involving multiple layers and expected business failures. This plays to Result's strengths.
 
-### Use Exceptions When:
-- Integrating with .NET libraries that throw
-- Handling truly exceptional cases (out of memory, stack overflow)
-- Programming errors that indicate bugs (null reference, index out of bounds)
-- Most layers genuinely can't handle the error
-
-### Use Results When:
-- Failures are expected business outcomes (validation, insufficient stock)
-- Callers should always handle the failure case
-- You want structured error information
-- You need clean partial failure handling
-- You want to log once at the boundary, not at every layer
-
-### Hybrid Approach
-Many codebases use both:
-- Results for internal domain logic
-- Convert to exceptions at public API boundaries (if matching .NET conventions)
-- Wrap external exceptions in Results at infrastructure boundaries
+See `analysis.md` for a balanced comparison of when each approach is more appropriate.
